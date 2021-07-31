@@ -100,17 +100,46 @@ func (c *pdnsDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	klog.Infof("call function Present: namespace=%s, zone=%s, fqdn=%s", ch.ResourceNamespace, ch.ResolvedZone, ch.ResolvedFQDN)
 
 	config, err := clientConfig(c, ch)
-	key := fmt.Sprintf("\"%s\"", ch.Key)
+	//key := fmt.Sprintf("\"%s\"", ch.Key)
 
 	if err != nil {
 		klog.Errorf("unable to get secret `%s`; %v", ch.ResourceNamespace, err)
+		return err
 	}
 
 	pdns := powerdns.NewClient(config.ApiUrl, config.ServerName, map[string]string{"X-API-Key": config.ApiKey}, nil)
-	p_err := pdns.Records.Add(config.ZoneName, ch.ResolvedFQDN, powerdns.RRTypeTXT, 120, []string{key})
+	//p_err := pdns.Records.Add(config.ZoneName, ch.ResolvedFQDN, powerdns.RRTypeTXT, 120, []string{key})
 
-	if p_err != nil {
-		klog.Errorf("Pdns client error: %v", p_err)
+	//First Request RRSet and check if key+value exists. else add and set as new rrset.
+	zone, err := pdns.Zones.Get(ch.ResolvedZone)
+	if err != nil {
+		klog.Errorf("Error Getting Zone: %v\n", err)
+		return err
+	}
+
+	existing_keys := []string{}
+
+	//Try find an Exsisting RRset - and record all the values.
+	for _, r := range zone.RRsets {
+
+		if *r.Name == ch.ResolvedFQDN && *r.Type == powerdns.RRTypeTXT {
+			//check if the Record is already in the RRSET
+			for _, record := range r.Records {
+				if *record.Content == fmt.Sprintf(`"%s"`, ch.Key) {
+					fmt.Printf("Challange Already in TXT Record. \n")
+					return nil
+				}
+				existing_keys = append(existing_keys, *record.Content)
+			}
+
+		}
+	}
+
+	existing_keys = append(existing_keys, fmt.Sprintf(`"%s"`, ch.Key))
+	err = pdns.Records.Change(ch.ResolvedZone, ch.ResolvedFQDN, powerdns.RRTypeTXT, 15, existing_keys)
+
+	if err != nil {
+	 	klog.Errorf("Error Adding Record: %+v\n", err)
 	}
 
 	klog.Infof("Presented txt record %v", ch.ResolvedFQDN)
@@ -132,11 +161,33 @@ func (c *pdnsDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	if err != nil {
 		klog.Errorf("unable to get secret `%s`; %v", ch.ResourceNamespace, err)
 	}
+	
 	pdns := powerdns.NewClient(config.ApiUrl, config.ServerName, map[string]string{"X-API-Key": config.ApiKey}, nil)
-	p_err := pdns.Records.Delete(config.ZoneName, ch.ResolvedFQDN, powerdns.RRTypeTXT)
+	zone, err := pdns.Zones.Get(ch.ResolvedZone)
+	if err != nil {
+		fmt.Printf("Error Getting Zone: %v\n", err)
+		return err
+	}
 
-	if p_err != nil {
-		klog.Error(p_err)
+	remaining_keys := []string{}
+
+	//Make a list of keys that should remain after this cleanup
+	for _, r := range zone.RRsets {
+		if *r.Name == ch.ResolvedFQDN && *r.Type == powerdns.RRTypeTXT {
+			for _, record := range r.Records {
+				//Remove the matching key
+				if *record.Content != fmt.Sprintf(`"%s"`, ch.Key) {
+					remaining_keys = append(remaining_keys, *record.Content)
+				}
+			}
+
+		}
+	}
+
+	err = pdns.Records.Change(ch.ResolvedZone, ch.ResolvedFQDN, powerdns.RRTypeTXT, 15, remaining_keys)
+
+	if err != nil {
+		klog.Errorf("Error Removing Record: %v\n", err)
 	}
 
 	klog.Infof("Delete TXT record result: %s", ch.ResolvedFQDN)
