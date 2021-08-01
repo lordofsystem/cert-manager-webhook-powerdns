@@ -1,5 +1,7 @@
 # ACME webhook for PowerDNS API
 
+[![Release Charts](https://github.com/lordofsystem/cert-manager-webhook-powerdns/actions/workflows/release.yml/badge.svg?branch=master)](https://github.com/lordofsystem/cert-manager-webhook-powerdns/actions/workflows/release.yml)
+
 This solver can be used when you want to use cert-manager with PowerDNS HTTP API. API documentation is [here](https://doc.powerdns.com/authoritative/http-api/#)
 
 ## Requirements
