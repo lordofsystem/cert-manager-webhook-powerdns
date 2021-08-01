@@ -126,7 +126,7 @@ func (c *pdnsDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 			//check if the Record is already in the RRSET
 			for _, record := range r.Records {
 				if *record.Content == fmt.Sprintf(`"%s"`, ch.Key) {
-					fmt.Printf("Challange Already in TXT Record. \n")
+					klog.Info("Challange Already in TXT Record. \n")
 					return nil
 				}
 				existing_keys = append(existing_keys, *record.Content)
@@ -165,7 +165,7 @@ func (c *pdnsDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	pdns := powerdns.NewClient(config.ApiUrl, config.ServerName, map[string]string{"X-API-Key": config.ApiKey}, nil)
 	zone, err := pdns.Zones.Get(ch.ResolvedZone)
 	if err != nil {
-		fmt.Printf("Error Getting Zone: %v\n", err)
+		klog.Infof("Error Getting Zone: %v\n", err)
 		return err
 	}
 
