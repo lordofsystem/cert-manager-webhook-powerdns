@@ -64,7 +64,7 @@ spec:
             groupName: acme.yourdomain.tld
             solverName: pdns
             config:
-              secretName: powerdns-secret
+              secretName: pdns-secret
               zoneName: example.com.
               apiUrl: https://powerndns.com
 ```
