@@ -6,8 +6,9 @@ require (
 	github.com/jetstack/cert-manager v1.2.0
 	github.com/joeig/go-powerdns/v2 v2.4.1
 	github.com/miekg/dns v1.1.43 // indirect
+	google.golang.org/grpc/examples v0.0.0-20211216223938-51835dc0912b // indirect
 	k8s.io/apiextensions-apiserver v0.19.0
-	k8s.io/apimachinery v0.19.0
-	k8s.io/client-go v0.19.0
+	k8s.io/apimachinery v0.23.1
+	k8s.io/client-go v0.23.1
 	k8s.io/klog v1.0.0
 )
