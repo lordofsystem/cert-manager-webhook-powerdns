@@ -79,6 +79,7 @@ type pdnsDNSProviderConfig struct {
 	ZoneName   string `json:"zoneName"`
 	ServerName string `json:"server"`
 	ApiUrl     string `json:"apiUrl"`
+	Zone       string `json:"zone"`
 }
 
 // Name is used as the name for this DNS solver when referencing it on the ACME
@@ -111,7 +112,7 @@ func (c *pdnsDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	//p_err := pdns.Records.Add(config.ZoneName, ch.ResolvedFQDN, powerdns.RRTypeTXT, 120, []string{key})
 
 	//First Request RRSet and check if key+value exists. else add and set as new rrset.
-	zone, err := pdns.Zones.Get(ch.ResolvedZone)
+	zone, err := pdns.Zones.Get(config.Zone)
 	if err != nil {
 		klog.Errorf("Error Getting Zone: %v\n", err)
 		return err
@@ -136,10 +137,10 @@ func (c *pdnsDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	}
 
 	existing_keys = append(existing_keys, fmt.Sprintf(`"%s"`, ch.Key))
-	err = pdns.Records.Change(ch.ResolvedZone, ch.ResolvedFQDN, powerdns.RRTypeTXT, 15, existing_keys)
+	err = pdns.Records.Change(config.Zone, ch.ResolvedFQDN, powerdns.RRTypeTXT, 15, existing_keys)
 
 	if err != nil {
-	 	klog.Errorf("Error Adding Record: %+v\n", err)
+		klog.Errorf("Error Adding Record: %+v\n", err)
 	}
 
 	klog.Infof("Presented txt record %v", ch.ResolvedFQDN)
@@ -161,9 +162,9 @@ func (c *pdnsDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	if err != nil {
 		klog.Errorf("unable to get secret `%s`; %v", ch.ResourceNamespace, err)
 	}
-	
+
 	pdns := powerdns.NewClient(config.ApiUrl, config.ServerName, map[string]string{"X-API-Key": config.ApiKey}, nil)
-	zone, err := pdns.Zones.Get(ch.ResolvedZone)
+	zone, err := pdns.Zones.Get(config.Zone)
 	if err != nil {
 		klog.Infof("Error Getting Zone: %v\n", err)
 		return err
@@ -184,7 +185,7 @@ func (c *pdnsDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 		}
 	}
 
-	err = pdns.Records.Change(ch.ResolvedZone, ch.ResolvedFQDN, powerdns.RRTypeTXT, 15, remaining_keys)
+	err = pdns.Records.Change(config.Zone, ch.ResolvedFQDN, powerdns.RRTypeTXT, 15, remaining_keys)
 
 	if err != nil {
 		klog.Errorf("Error Removing Record: %v\n", err)
@@ -253,6 +254,11 @@ func clientConfig(c *pdnsDNSProviderSolver, ch *v1alpha1.ChallengeRequest) (inte
 	config.ZoneName = cfg.ZoneName
 	config.ApiUrl = cfg.ApiUrl
 	config.ServerName = cfg.ServerName
+	config.Zone = cfg.Zone
+
+	if config.Zone == "" {
+		config.Zone = ch.ResolvedZone
+	}
 
 	secretName := cfg.SecretRef
 	sec, err := c.client.CoreV1().Secrets(ch.ResourceNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
