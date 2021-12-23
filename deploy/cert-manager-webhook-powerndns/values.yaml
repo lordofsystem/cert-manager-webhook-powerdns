@@ -44,3 +44,18 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# set the security context of the webhook pod
+podSecurityContext: {}
+#  runAsUser: 1000
+#  runAsGroup: 3000
+#  fsGroup: 2000
+
+# set the security context of the container started in the webhook
+securityContext: {}
+#  runAsUser: 1000
+#  runAsGroup: 3000
+#  fsGroup: 2000
+
+
+
