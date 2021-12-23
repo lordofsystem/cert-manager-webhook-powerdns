@@ -121,3 +121,83 @@ subjects:
     kind: ServiceAccount
     name: {{ include "cert-manager-webhook-powerdns.fullname" . }}
     namespace: {{ .Release.Namespace }}
+{{- if .Values.podSecurityPolicy.enabled }}
+{{-   $psp_use_list = .Values.podSecurityPolicy.use }}
+{{-   if .Values.podSecurityPolicy.create }}
+{{-     $psp_use_list = append $psp_use_list "webhook-powerdns-restricted" }}
+---
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: webhook-powerdns-restricted
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default,runtime/default'
+    apparmor.security.beta.kubernetes.io/allowedProfileNames: 'runtime/default'
+    apparmor.security.beta.kubernetes.io/defaultProfileName:  'runtime/default'
+spec:
+  privileged: false
+  # Required to prevent escalations to root.
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  # Allow core volume types.
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'ephemeral'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    # Require the container to run without root privileges.
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    # This policy assumes the nodes are using AppArmor rather than SELinux.
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'MustRunAs'
+    ranges:
+      # Forbid adding the root group.
+      - min: 1
+        max: 65535
+  fsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      # Forbid adding the root group.
+      - min: 1
+        max: 65535
+  readOnlyRootFilesystem: false
+{{-  end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "cert-manager-webhook-powerdns.fullname" . }}:psp-use
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: ["policy"]
+    resources: ["podsecuritypolicies"]
+    verbs: ["use"]
+    resourceNames:
+    {{- with $psp_use_list }}
+    - {{ . }}
+    {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "cert-manager-webhook-powerdns.fullname" . }}:psp-use
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "cert-manager-webhook-powerdns.fullname" . }}:psp-use
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: {{ include "cert-manager-webhook-powerdns.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+{{ end }}

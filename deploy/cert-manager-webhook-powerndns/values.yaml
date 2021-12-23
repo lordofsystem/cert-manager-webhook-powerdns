@@ -27,6 +27,16 @@ service:
 secretName:
   - pdns-secret
 
+# enable the use of Pod Security Policies (PSPs)
+# either set `create` to true in order to create a new PSP with minimal persmissions 
+# or leave set to false and add a list of PSP names to `use` for the inclusion of existing
+# PSPs
+podSecurityPolicy:
+  # set to true to enable
+  enable: false
+  create: false
+  use: []
+
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
