@@ -64,6 +64,7 @@ spec:
             groupName: acme.yourdomain.tld
             solverName: pdns
             config:
+              zone: example.com # (Optional): When not provided the Zone will obtained by cert-manager's ResolvedZone
               secretName: pdns-secret
               zoneName: example.com.
               apiUrl: https://powerndns.com
