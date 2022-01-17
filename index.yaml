@@ -3,6 +3,15 @@ entries:
   cert-manager-webhook-powerdns:
   - apiVersion: v1
     appVersion: "1.0"
+    created: "2022-01-17T14:22:07.007038827Z"
+    description: A Helm chart for Kubernetes
+    digest: b9c0c990a79e485deb8b3b2997bb54bd88a13fac9f6bb6b8886d80aabb8ddb36
+    name: cert-manager-webhook-powerdns
+    urls:
+    - https://github.com/lordofsystem/cert-manager-webhook-powerdns/releases/download/cert-manager-webhook-powerdns-0.1.5/cert-manager-webhook-powerdns-0.1.5.tgz
+    version: 0.1.5
+  - apiVersion: v1
+    appVersion: "1.0"
     created: "2021-12-24T11:11:28.836153631Z"
     description: A Helm chart for Kubernetes
     digest: 4117458287e94ea050f1c9eb98ca573901699dd2d412b866c1274080ab0d7ab8
@@ -28,4 +37,4 @@ entries:
     urls:
     - https://github.com/lordofsystem/cert-manager-webhook-powerdns/releases/download/cert-manager-webhook-powerdns-0.1.1/cert-manager-webhook-powerdns-0.1.1.tgz
     version: 0.1.1
-generated: "2021-12-24T11:11:28.836167727Z"
+generated: "2022-01-17T14:22:07.007063127Z"
