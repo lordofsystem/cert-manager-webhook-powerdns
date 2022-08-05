@@ -76,7 +76,6 @@ type pdnsDNSProviderConfig struct {
 	//Email           string `json:"email"`
 	//APIKeySecretRef v1alpha1.SecretKeySelector `json:"apiKeySecretRef"`
 	SecretRef  string `json:"secretName"`
-	ZoneName   string `json:"zoneName"`
 	ServerName string `json:"server"`
 	ApiUrl     string `json:"apiUrl"`
 	Zone       string `json:"zone"`
@@ -109,7 +108,7 @@ func (c *pdnsDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	}
 
 	pdns := powerdns.NewClient(config.ApiUrl, config.ServerName, map[string]string{"X-API-Key": config.ApiKey}, nil)
-	//p_err := pdns.Records.Add(config.ZoneName, ch.ResolvedFQDN, powerdns.RRTypeTXT, 120, []string{key})
+	//p_err := pdns.Records.Add(config.Zone, ch.ResolvedFQDN, powerdns.RRTypeTXT, 120, []string{key})
 
 	//First Request RRSet and check if key+value exists. else add and set as new rrset.
 	zone, err := pdns.Zones.Get(config.Zone)
@@ -251,7 +250,6 @@ func clientConfig(c *pdnsDNSProviderSolver, ch *v1alpha1.ChallengeRequest) (inte
 	if err != nil {
 		return config, err
 	}
-	config.ZoneName = cfg.ZoneName
 	config.ApiUrl = cfg.ApiUrl
 	config.ServerName = cfg.ServerName
 	config.Zone = cfg.Zone

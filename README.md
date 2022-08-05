@@ -66,7 +66,6 @@ spec:
             config:
               zone: example.com # (Optional): When not provided the Zone will obtained by cert-manager's ResolvedZone
               secretName: pdns-secret
-              zoneName: example.com.
               apiUrl: https://powerndns.com
 ```
 
@@ -116,8 +115,7 @@ else they will have undetermined behaviour when used with cert-manager.
 **It is essential that you configure and run the test suite when creating a
 DNS01 webhook.**
 
-You need to replace `zoneName` parameter at `testdata/pdns/config.json` file with actual one.
-You also must encode your api token into base64 and put the hash into `testdata/pdns/pdns-secret.yml` file.
+You must encode your api token into base64 and put the hash into `testdata/pdns/pdns-secret.yml` file.
 
 You can then run the test suite with:
 

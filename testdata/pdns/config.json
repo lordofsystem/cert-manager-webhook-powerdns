@@ -1,6 +1,5 @@
 {
     "secretName": "pdns-secret",
-    "zoneName": "example.com.",
     "server": "localhost",
     "apiUrl" : "https://powerdns.api"
   }
