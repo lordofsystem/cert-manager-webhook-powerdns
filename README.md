@@ -64,15 +64,17 @@ spec:
             groupName: acme.yourdomain.tld
             solverName: pdns
             config:
-              zone: example.com # (Optional): When not provided the Zone will obtained by cert-manager's ResolvedZone
+              zone: example.com # Optional, see below
+              domain: _acme-challenge.example.com # Optional, see below
               secretName: pdns-secret
               apiUrl: https://powerndns.com
+              serverName: localhost # Optional, default is 'localhost'
 ```
 
 ### Credentials
 In order to access the HTTP API, the webhook needs an API token.
 
-If you choose another name for the secret than `powerdns-secret`, ensure you modify the value of `secretName` in the `[Cluster]Issuer`.
+If you choose another name for the secret than `pdns-secret`, ensure you modify the value of `secretName` in the `[Cluster]Issuer`.
 
 The secret for the example above will look like this:
 ```yaml
@@ -84,6 +86,39 @@ type: Opaque
 data:
   api-key: your-key-base64-encoded
 ```
+
+### Optional zone and domain
+
+The 'zone' and 'domain' config settings are optional. If they are not provided in the config, 
+they are automatically extracted from certificate request (if you need a certificate for
+"subdomain.example.com", the zone and and domain will be set to "example.com" and 
+"_acme-challenge.subdomain.example.com". This is exactly what you need to create TXT records
+in a regular authoritative name server.
+
+If you however use a dedicated DNS server that you exclusively use for ACME challenges so that
+you do not have to open up the API of your regular DNS server, you can use an alternative setup
+instead. To run a dedicated DNS server for only the acme challenges, make sure you create
+this configuration in your main DNS server:
+
+```
+acme-dns-server.example.com     A           1.2.3.4
+acme-challenges.example.com     NS          acme-dns-server.example.com
+_acme-challenge.example.com     CNAME       example-com.acme-challenges.example.com
+_acme-challenge.example.org     CNAME       example-org.acme-challenges.example.com
+_acme-challenge.example.net     CNAME       example-net.acme-challenges.example.com
+```
+
+The above configuration specifies that you have a dedicated DNS server accessible via
+IP 1.2.3.4, and that this server is authoratative for all "*.acme-challenges.example.com"
+subdomains. You also create one or more static CNAME records for your acme challenges 
+that point to such subdomains.
+
+In the "config" section of your `ClusterIssuer` or `Issuer` you can then set the 
+domain to `example-com.acme-challenges.example.com`, the zone to 
+`acme-challenges.example.com` and the apiUrl to `http://acme-dns-server.example.com`.
+The challenges will then be hosted in an exclusive DNS server and your main DNS
+server does not have to open its API.
+
 
 ### Create a certificate
 

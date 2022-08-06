@@ -79,6 +79,7 @@ type pdnsDNSProviderConfig struct {
 	ServerName string `json:"server"`
 	ApiUrl     string `json:"apiUrl"`
 	Zone       string `json:"zone"`
+	Domain     string `json:"domain"`
 }
 
 // Name is used as the name for this DNS solver when referencing it on the ACME
@@ -116,13 +117,13 @@ func (c *pdnsDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 		klog.Errorf("Error Getting Zone: %v\n", err)
 		return err
 	}
-
+    
 	existing_keys := []string{}
 
 	//Try find an Exsisting RRset - and record all the values.
 	for _, r := range zone.RRsets {
 
-		if *r.Name == ch.ResolvedFQDN && *r.Type == powerdns.RRTypeTXT {
+		if *r.Name == config.Domain && *r.Type == powerdns.RRTypeTXT {
 			//check if the Record is already in the RRSET
 			for _, record := range r.Records {
 				if *record.Content == fmt.Sprintf(`"%s"`, ch.Key) {
@@ -136,13 +137,13 @@ func (c *pdnsDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	}
 
 	existing_keys = append(existing_keys, fmt.Sprintf(`"%s"`, ch.Key))
-	err = pdns.Records.Change(config.Zone, ch.ResolvedFQDN, powerdns.RRTypeTXT, 15, existing_keys)
+	err = pdns.Records.Change(config.Zone, config.Domain, powerdns.RRTypeTXT, 15, existing_keys)
 
 	if err != nil {
 		klog.Errorf("Error Adding Record: %+v\n", err)
 	}
 
-	klog.Infof("Presented txt record %v", ch.ResolvedFQDN)
+	klog.Infof("Presented txt record %v", config.Domain)
 
 	return nil
 }
@@ -173,7 +174,7 @@ func (c *pdnsDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 
 	//Make a list of keys that should remain after this cleanup
 	for _, r := range zone.RRsets {
-		if *r.Name == ch.ResolvedFQDN && *r.Type == powerdns.RRTypeTXT {
+		if *r.Name == config.Domain && *r.Type == powerdns.RRTypeTXT {
 			for _, record := range r.Records {
 				//Remove the matching key
 				if *record.Content != fmt.Sprintf(`"%s"`, ch.Key) {
@@ -184,13 +185,13 @@ func (c *pdnsDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 		}
 	}
 
-	err = pdns.Records.Change(config.Zone, ch.ResolvedFQDN, powerdns.RRTypeTXT, 15, remaining_keys)
+	err = pdns.Records.Change(config.Zone, config.Domain, powerdns.RRTypeTXT, 15, remaining_keys)
 
 	if err != nil {
 		klog.Errorf("Error Removing Record: %v\n", err)
 	}
 
-	klog.Infof("Delete TXT record result: %s", ch.ResolvedFQDN)
+	klog.Infof("Delete TXT record result: %s", config.Domain)
 	return nil
 }
 
@@ -257,6 +258,28 @@ func clientConfig(c *pdnsDNSProviderSolver, ch *v1alpha1.ChallengeRequest) (inte
 	if config.Zone == "" {
 		config.Zone = ch.ResolvedZone
 	}
+
+    // we normally create a DNS TXT record for the domain that is passed to us by CertManager (this
+    // is "_acme-challenge.example.com" or so), but we also allow users to configure an alternative
+    // domain so that they can use tricks with CNAME and NS records in their main DNS server. They
+    // can then run a dedicated DNS server that is only used for ACME records, and do not have to
+    // open their regular DNS server for dynamic updates. The setup could then for example be:
+    //
+    //      acme-dns-server.example.com     A           1.2.3.4
+    //      acme-challenges.example.com     NS          acme-dns-server.example.com
+    //      _acme-challenge.example.com     CNAME       example-com.acme-challenges.example.com
+    //      _acme-challenge.example.org     CNAME       example-org.acme-challenges.example.com
+    //      _acme-challenge.example.net     CNAME       example-net.acme-challenges.example.com
+    //
+    //  With the above setup, the user runs a dedicated DNS server "acme-dns-server.example.com"
+    //  accessible with IP 1.2.3.4 that is exclusively used for serving ACME challenges. All the
+    //  challenges are hosted under various "*.acme-challenges.example.com" TXT records. In that
+    //  case the config setting "domain" must be set so that we do not create a regular _acme-challenge
+    //  record, but a "example-com.acme-challenges.example.com" record instead.
+    if config.Domain == "" {
+        config.Domain = ch.ResolvedFQDN
+    }
+
 
 	secretName := cfg.SecretRef
 	sec, err := c.client.CoreV1().Secrets(ch.ResourceNamespace).Get(context.Background(), secretName, metav1.GetOptions{})
